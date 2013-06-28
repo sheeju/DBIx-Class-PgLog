@@ -6,11 +6,12 @@ use Data::Printer;
 use Try::Tiny;
 
 use lib '../lib';
-use AuditTestPg::Schema;
 use DBIx::Class::PgLog;
+use lib 'lib';
+use PgLogTestPg::Schema;
 use Data::Dumper;
 
-my $schema = AuditTestPg::Schema->connect( "DBI:Pg:dbname=pg_log_test",
+my $schema = PgLogTestPg::Schema->connect( "DBI:Pg:dbname=pg_log_test",
     "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
 
 #['dbi:Pg:dbname=audit_test','sheeju','sheeju', {'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' }],
@@ -19,11 +20,8 @@ my $pgl_schema;
 
 # deploy the audit log schema if it's not installed
 try {
-	print "trying............\n";
     $pgl_schema = $schema->pg_log_schema;
-	print "trying............\n";
     my $changesets = $pgl_schema->resultset('PgLogLog')->all;
-	print "trying............\n";
 	print Dumper($changesets);
 }
 catch {
@@ -36,10 +34,10 @@ $schema->txn_do(
     sub {
         $user_01 = $schema->resultset('User')->create(
             {   
+				Name => 'JohnSample',
                 Email => 'jsample@sample.com',
                 PasswordSalt => 'sheeju',
                 PasswordHash => 'sheeju',
-                PasswordHashType => 'MD5',
                 Status => 'Active',
                 Type => 'Admin',
             }
@@ -52,38 +50,46 @@ $schema->txn_do(
     },
 );
 
-exit;
 
 $schema->txn_do(
     sub {
-        $user_01->phone('111-222-3333');
-        $user_01->update();
+        $user_01->update({Email => 'sheeju@exceleron.com'});
     },
-    {   description => "updating phone of JohnSample",
-        user        => "TestAdminUser",
+    {   
+		Description => "Updating User JohnSample",
+        UserId => 1, 
+        ShardId => 10, 
     },
 );
-
 
 $schema->txn_do(
     sub {
         $user_01->delete;
     },
-    {   description => "delete user: JohnSample",
-        user_id     => "YetAnotherAdminUser",
+    {   
+		Description => "Deleteing User JohnSample",
+        UserId => 1, 
+        ShardId => 10, 
     },
 );
 
 $schema->txn_do(
     sub {
         $schema->resultset('User')->create(
-            {   name  => "TehPnwerer",
-                email => 'jeremy@purepwnage.com',
-                phone => '999-888-7777',
+            {   Name  => "TehPnwerer",
+                Email => 'jeremy@purepwnage.com',
+				PasswordSalt => 'sheeju',
+                PasswordHash => 'sheeju',
+                Status => 'Active',
+                Type => 'User',
             }
         );
     },
-    { description => "adding new user: TehPwnerer -- no admin user", },
+    { 
+		Description => "adding new user: TehPwnerer -- no admin user", 
+        UserId => 1, 
+        ShardId => 10, 
+	},
 );
 
 my $superman;
@@ -91,71 +97,76 @@ my $spiderman;
 $schema->txn_do(
     sub {
         $superman = $schema->resultset('User')->create(
-            {   name  => "Superman",
-                email => 'ckent@dailyplanet.com',
-                phone => '123-456-7890',
+            {   Name  => "Superman",
+                Email => 'ckent@dailyplanet.com',
+				PasswordSalt => 'sheeju',
+                PasswordHash => 'sheeju',
+                Status => 'Active',
+                Type => 'Super',
             }
         );
         $superman->update(
-            {   name  => "Superman",
-                email => 'ckent@dailyplanet.com',
-                phone => '123-456-7890',
+            {   Name  => "Superman",
+                Email => 'ckent@dailyplanet.com',
             }
         );
         $spiderman = $schema->resultset('User')->create(
-            {   name  => "Spiderman",
-                email => 'ppaker@dailybugle.com',
-                phone => '987-654-3210',
+            {   Name  => "Spiderman",
+                Email => 'ppaker@dailybugle.com',
+				PasswordSalt => 'sheeju',
+                PasswordHash => 'sheeju',
+                Status => 'Active',
+                Type => 'Admin',
             }
         );
-        $schema->resultset('User')->search( { name => "Spiderman" } )
+        $schema->resultset('User')->search( { Name => "Spiderman" } )
             ->first->update(
-            {   name  => "Spiderman",
-                email => 'pparker@dailybugle.com',
-                phone => '987-654-3210',
+            {   
+				Name  => "Spiderman",
+                Email => 'pparker@dailybugle.com',
             }
             );
-        $schema->resultset('User')->search( { name => "TehPnwerer" } )
+        $schema->resultset('User')->search( { Name => "TehPnwerer" } )
             ->first->update(
-            { name => 'TehPwnerer', phone => '416-123-4567' } );
+            { Name => 'TehPwnerer' } );
     },
-    {   description => "multi-action changeset",
-        user_id     => "ioncache",
+    {   
+		Description => "multi-action changeset",
+        UserId => 1, 
+        ShardId => 10, 
     },
 );
 
 $schema->resultset('User')->create(
-    {   name  => "NonChangesetUser",
-        email => 'ncu@oanda.com',
-        phone => '987-654-3210',
+    {   
+		Name  => "NonLogsetUser",
+        Email => 'ncu@oanda.com',
+		PasswordSalt => 'sheeju',
+		PasswordHash => 'sheeju',
+		Status => 'Active',
+		Type => 'Admin',
     }
 );
 
 $schema->txn_do(
     sub {
         $schema->resultset('User')->create(
-            {   name  => "Drunk Hulk",
-                email => 'drunkhulk@twitter.com',
-                phone => '123-456-7890',
+            {   
+				Name  => "Drunk Hulk",
+                Email => 'drunkhulk@twitter.com',
+				PasswordSalt => 'sheeju',
+				PasswordHash => 'sheeju',
+				Status => 'Active',
+				Type => 'Admin',
             }
         );
-        $schema->resultset('User')->search( { name => "Drunk hulk" } )
-            ->first->update( { email => 'drunkhulk@everywhere.com' } );
+        $schema->resultset('User')->search( { Name => "Drunk hulk" } )
+            ->first->update( { Email => 'drunkhulk@everywhere.com' } );
     },
-    { user_id => "markj", },
+    { 
+        UserId => 1, 
+        ShardId => 10, 
+	},
 );
-
-$schema->resultset('User')->search( { name => "NonChangesetUser" } )
-    ->first->update( { phone => '543-210-9876' } );
-
-my $atbdu = $schema->resultset('User')->create(
-    {   name  => "AboutToBeDeletedUser",
-        email => 'atbdu@oanda.com',
-        phone => '987-654-3210',
-    }
-);
-
-$atbdu->delete;
-
 
 1;

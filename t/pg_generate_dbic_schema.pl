@@ -11,11 +11,11 @@ use DBIx::Class::Schema::Loader 'make_schema_at';
 our ($opt_F, $opt_d);
 getopts('Fd');
 
-make_schema_at('AuditTestPg::Schema',
+make_schema_at('PgLogTestPg::Schema',
 	       {
 			   debug => !!($opt_d), 
 			   really_erase_my_files => !!($opt_F),
-			   dump_directory=>"$FindBin::Bin/../lib",
+			   dump_directory=>"$FindBin::Bin/lib",
 			   overwrite_modifications=>1,
                preserve_case=>1,
 		   },

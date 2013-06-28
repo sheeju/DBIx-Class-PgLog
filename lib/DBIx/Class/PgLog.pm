@@ -59,7 +59,51 @@ sub update {
 
     return $self->next::method(@_) if !$enabled;
 
-    return;
+    my $stored_row      = $self->get_from_storage;
+    my %new_data        = $self->get_columns;
+    my @changed_columns = keys %{ $_[0] || {} };
+
+    my $result = $self->next::method(@_);
+
+    return unless $stored_row; # update on deleted row - nothing to log
+
+    my %old_data = $stored_row->get_columns;
+
+    if (@changed_columns) {
+        @new_data{@changed_columns} = map $self->get_column($_),
+            @changed_columns;
+    }
+
+=pod
+
+    foreach my $col ( $self->columns ) {
+        if ( $self->_force_audit($col) ) {
+            $old_data{$col} = $stored_row->get_column($col)
+                unless defined $old_data{$col};
+            $new_data{$col} = $self->get_column($col)
+                unless defined $new_data{$col};
+        }
+    }
+
+    # remove unwanted columns
+    foreach my $key ( keys %new_data ) {
+        next if $self->_force_audit($key);    # skip forced cols
+        if (   defined $old_data{$key}
+            && defined $new_data{$key}
+            && $old_data{$key} eq $new_data{$key}
+            || !defined $old_data{$key} && !defined $new_data{$key} )
+        {
+            delete $new_data{$key};           # remove unchanged cols
+        }
+    }
+
+=cut
+    if ( keys %new_data ) {
+		my $action = "UPDATE";
+		$self->_store_changes( $action, $result, \%old_data, \%new_data );
+    }
+
+    return $result;
 }
 
 sub delete {
@@ -67,9 +111,16 @@ sub delete {
 
     return $self->next::method(@_) if !$enabled;
 
-    return ;
-}
+    my $stored_row = $self->get_from_storage;
 
+    my $result = $self->next::method(@_);
+
+	my $action = "DELETE";
+	my %old_data = $stored_row->get_columns;
+	$self->_store_changes( $action, $result, \%old_data, {} );
+
+    return $result;
+}
 
 sub _pg_log_schema {
     my $self = shift;
@@ -87,8 +138,8 @@ sub _store_changes {
 
 	my $log_data = {};
 	@{$log_data->{Keys}} = keys %{$new_values} ? keys %{$new_values} : keys %{$old_values}; 
-	@{$log_data->{OldValues}} = values %{$old_values};
-	@{$log_data->{NewValues}} = values %{$new_values};
+	@{$log_data->{OldValues}} = map{$old_values->{$_}} @{$log_data->{Keys}}; 
+	@{$log_data->{NewValues}} = map{$new_values->{$_}} @{$log_data->{Keys}};
 	$log_data->{Table} = $table;
 	$log_data->{TableId} = $row->can(Id)?$row->Id:$row->id;
 	$log_data->{TableShardId} = $row->can(ShardId)?$row->ShardId:0;
