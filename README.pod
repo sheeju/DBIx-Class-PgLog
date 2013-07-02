@@ -151,11 +151,11 @@ The PgLog schema is a self-contained schema that keeps no relationships to your 
 
 The PgLog schema consists of 2 tables LogSet and Log, Log table extensively makes use of the power of Postgres to store the Columns, OldValues and NewValues in an Column Array format to avoid the relational database structure which imporves the performance of write and read from PgLog.
 
-        List of relations
- Schema |  Name  | Type  | Owner  
---------+--------+-------+--------
- public | LogSet | table | sheeju
- public | Log    | table | sheeju
+	        List of relations
+	 Schema |  Name  | Type  | Owner  
+	--------+--------+-------+--------
+	 public | LogSet | table | sheeju
+	 public | Log    | table | sheeju
 
 =over 4
 
@@ -163,41 +163,40 @@ The PgLog schema consists of 2 tables LogSet and Log, Log table extensively make
 
 The L<PgLogLogSet|DBIx::Class::Schema::PgLog::Structure::LogSet> is an identifier for a transaction which has optional Description, mandatory UserId and ShardId. 
 
-pg_log_test=> \d "LogSet"
-                             Table "public.LogSet"
-   Column    |   Type   |                       Modifiers                       
--------------+----------+-------------------------------------------------------
- ShardId     | smallint | not null
- Id          | integer  | not null default nextval('"LogSet_Id_seq"'::regclass)
- Epoch       | integer  | not null
- Description | text     | not null
- UserId      | integer  | not null
-Indexes:
-    "LogSet_pkey" PRIMARY KEY, btree ("ShardId", "Id")
+	pg_log_test=> \d "LogSet"
+	                             Table "public.LogSet"
+	   Column    |   Type   |                       Modifiers                       
+	-------------+----------+-------------------------------------------------------
+	 ShardId     | smallint | not null
+	 Id          | integer  | not null default nextval('"LogSet_Id_seq"'::regclass)
+	 Epoch       | integer  | not null
+	 Description | text     | not null
+	 UserId      | integer  | not null
+	Indexes:
+	    "LogSet_pkey" PRIMARY KEY, btree ("ShardId", "Id")
 
 =item Log 
 
 The L<PgLogLog|DBIx::Class::Schema::PgLog::Structure::Log> table is main table which stores the Table, TableAction, Columns and its Old and New Values for each transaction. 
 
-pg_log_test=> \d "Log";
-                                      Table "public.Log"
-    Column    |           Type           |                     Modifiers                      
---------------+--------------------------+----------------------------------------------------
- ShardId      | smallint                 | not null
- Id           | integer                  | not null default nextval('"Log_Id_seq"'::regclass)
- LogSetId     | bigint                   | not null
- Epoch        | integer                  | not null
- Table        | character varying(128)   | not null
- TableShardId | smallint                 | not null
- TableId      | bigint                   | not null
- TableAction  | tableactiontype          | not null default 'UPDATE'::tableactiontype
- Columns      | character varying(255)[] | 
- OldValues    | text[]                   | 
- NewValues    | text[]                   | 
- UserId       | integer                  | not null
-Indexes:
-    "Log_pkey" PRIMARY KEY, btree ("ShardId", "Id")
-
+	pg_log_test=> \d "Log";
+	                                      Table "public.Log"
+	    Column    |           Type           |                     Modifiers                      
+	--------------+--------------------------+----------------------------------------------------
+	 ShardId      | smallint                 | not null
+	 Id           | integer                  | not null default nextval('"Log_Id_seq"'::regclass)
+	 LogSetId     | bigint                   | not null
+	 Epoch        | integer                  | not null
+	 Table        | character varying(128)   | not null
+	 TableShardId | smallint                 | not null
+	 TableId      | bigint                   | not null
+	 TableAction  | tableactiontype          | not null default 'UPDATE'::tableactiontype
+	 Columns      | character varying(255)[] | 
+	 OldValues    | text[]                   | 
+	 NewValues    | text[]                   | 
+	 UserId       | integer                  | not null
+	Indexes:
+	    "Log_pkey" PRIMARY KEY, btree ("ShardId", "Id")
 
 =back
 
@@ -205,10 +204,10 @@ Indexes:
 
 To deploy an PgLog schema, load your main schema, and then run the deploy command on the pg_log_schema:
 
-my $schema = PgLogTestPg::Schema->connect( "DBI:Pg:dbname=pg_log_test",
-    "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
-
-$schema->pg_log_schema->deploy();
+	my $schema = PgLogTestPg::Schema->connect( "DBI:Pg:dbname=pg_log_test",
+	    "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
+	
+	$schema->pg_log_schema->deploy();
 
 The db user that is deploying the schema must have the correct create table permissions.
 
