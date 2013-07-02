@@ -76,15 +76,17 @@ sub current_logset {
 			my $txn_args = $self->_current_logset_container->{args};
 			my $logset_data = {};
 
-			$logset_data->{Epoch} = time();
-			$logset_data->{ShardId} = exists($txn_args->{ShardId})?$txn_args->{ShardId}:0; 
-			$logset_data->{UserId} = exists($txn_args->{UserId})?$txn_args->{UserId}:0; 
-			$logset_data->{Description} = exists($txn_args->{Description})?$txn_args->{Description}:""; 
+			if($txn_args) {
+				$logset_data->{Epoch} = time();
+				$logset_data->{ShardId} = exists($txn_args->{ShardId})?$txn_args->{ShardId}:0; 
+				$logset_data->{UserId} = exists($txn_args->{UserId})?$txn_args->{UserId}:0; 
+				$logset_data->{Description} = exists($txn_args->{Description})?$txn_args->{Description}:""; 
 
-			my $logset = $self->resultset('PgLogLogSet')->create( $logset_data );
+				my $logset = $self->resultset('PgLogLogSet')->create( $logset_data );
 
-            $self->_current_logset_container->{logset} = $logset->Id;
-            $id = $logset->Id;
+				$self->_current_logset_container->{logset} = $logset->Id;
+				$id = $logset->Id;
+			}
         }
 
         return $id;
@@ -100,14 +102,17 @@ sub pg_log_create_log {
 
 	my $logset = $self->current_logset;
 
-	my $txn_args = $self->_current_logset_container->{args};
+	if(defined($self->_current_logset_container)) {
+		my $txn_args = $self->_current_logset_container->{args};
+		if($txn_args && $logset) {
+			$log_data->{LogSetId} = $logset; 
+			$log_data->{Epoch} = time();
+			$log_data->{ShardId} = exists($txn_args->{ShardId})?$txn_args->{ShardId}:0; 
+			$log_data->{UserId} = exists($txn_args->{UserId})?$txn_args->{UserId}:0; 
 
-	$log_data->{LogSetId} = $logset; 
-	$log_data->{Epoch} = time();
-	$log_data->{ShardId} = exists($txn_args->{ShardId})?$txn_args->{ShardId}:0; 
-	$log_data->{UserId} = exists($txn_args->{UserId})?$txn_args->{UserId}:0; 
-
-	$self->resultset('PgLogLog')->create( $log_data );
+			$self->resultset('PgLogLog')->create( $log_data );
+		}
+	}
 }
 
 1;

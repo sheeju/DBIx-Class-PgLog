@@ -135,11 +135,27 @@ sub _store_changes {
     my $new_values = shift;
 
 	my $table = $row->result_source_instance->name; 
-
 	my $log_data = {};
-	@{$log_data->{Keys}} = keys %{$new_values} ? keys %{$new_values} : keys %{$old_values}; 
-	@{$log_data->{OldValues}} = map{$old_values->{$_}} @{$log_data->{Keys}}; 
-	@{$log_data->{NewValues}} = map{$new_values->{$_}} @{$log_data->{Keys}};
+
+	foreach my $column (
+		keys %{$new_values} ? keys %{$new_values} : keys %{$old_values} )
+	{
+		if ( $self->_do_pg_log($column) ) {
+			push(@{$log_data->{Columns}}, $column);
+			if ( $self->_do_modify_pg_log_value($column) ) {
+				push(@{$log_data->{NewValues}}, $self->_modify_pg_log_value( $column, $new_values->{$column} ));
+				push(@{$log_data->{OldValues}}, $self->_modify_pg_log_value( $column, $old_values->{$column} ));
+			} else {
+				push(@{$log_data->{NewValues}}, $new_values->{$column});
+				push(@{$log_data->{OldValues}}, $old_values->{$column});
+			}
+
+		}
+
+	}
+	#@{$log_data->{Columns}} = keys %{$new_values} ? keys %{$new_values} : keys %{$old_values}; 
+	#@{$log_data->{OldValues}} = map{$old_values->{$_}} @{$log_data->{Columns}}; 
+	#@{$log_data->{NewValues}} = map{$new_values->{$_}} @{$log_data->{Columns}};
 	$log_data->{Table} = $table;
 	$log_data->{TableId} = $row->can(Id)?$row->Id:$row->id;
 	$log_data->{TableShardId} = $row->can(ShardId)?$row->ShardId:0;
@@ -148,6 +164,48 @@ sub _store_changes {
 	$self->_pg_log_schema->pg_log_create_log($log_data);
 
 }
+
+sub _do_pg_log {
+    my $self   = shift;
+    my $column = shift;
+
+    my $info = $self->column_info($column);
+    return defined $info->{pg_log_column}
+        && $info->{pg_log_column} == 0 ? 0 : 1;
+}
+
+sub _do_modify_pg_log_value {
+    my $self   = shift;
+    my $column = shift;
+
+    my $info = $self->column_info($column);
+
+    return $info->{modify_pg_log_value} ? 1 : 0;
+}
+
+sub _modify_pg_log_value {
+    my $self   = shift;
+    my $column = shift;
+    my $value  = shift;
+
+    my $info = $self->column_info($column);
+    my $meth = $info->{modify_pg_log_value};
+    return $value
+        unless defined $meth;
+
+    return &$meth( $self, $value )
+        if ref($meth) eq 'CODE';
+
+    $meth = "modify_pg_log_$column"
+        unless $self->can($meth);
+
+    return $self->$meth($value)
+        if $self->can($meth);
+
+    die "unable to find modify_pg_log_method ($meth) for $column in $self";
+
+}
+
 
 =head1 AUTHOR
 

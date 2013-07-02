@@ -115,4 +115,10 @@ __PACKAGE__->set_primary_key("Id");
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 __PACKAGE__->load_components(qw/ PgLog /);
+__PACKAGE__->add_columns(
+	"+PasswordHash",
+	{ pg_log_column => 0, },
+	"+PasswordSalt",
+	{ pg_log_column => 0, },
+);
 1;

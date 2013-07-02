@@ -30,6 +30,8 @@ catch {
 };
 
 my $user_01;
+
+
 $schema->txn_do(
     sub {
         $user_01 = $schema->resultset('User')->create(
@@ -137,6 +139,7 @@ $schema->txn_do(
     },
 );
 
+
 $schema->resultset('User')->create(
     {   
 		Name  => "NonLogsetUser",
@@ -160,7 +163,7 @@ $schema->txn_do(
 				Type => 'Admin',
             }
         );
-        $schema->resultset('User')->search( { Name => "Drunk hulk" } )
+        $schema->resultset('User')->search( { Name => "Drunk Hulk" } )
             ->first->update( { Email => 'drunkhulk@everywhere.com' } );
     },
     { 
