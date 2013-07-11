@@ -78,7 +78,6 @@ sub current_logset {
 
 			if($txn_args) {
 				$logset_data->{Epoch} = time();
-				$logset_data->{ShardId} = exists($txn_args->{ShardId})?$txn_args->{ShardId}:0; 
 				$logset_data->{UserId} = exists($txn_args->{UserId})?$txn_args->{UserId}:0; 
 				$logset_data->{Description} = exists($txn_args->{Description})?$txn_args->{Description}:""; 
 
@@ -107,7 +106,6 @@ sub pg_log_create_log {
 		if($txn_args && $logset) {
 			$log_data->{LogSetId} = $logset; 
 			$log_data->{Epoch} = time();
-			$log_data->{ShardId} = exists($txn_args->{ShardId})?$txn_args->{ShardId}:0; 
 			$log_data->{UserId} = exists($txn_args->{UserId})?$txn_args->{UserId}:0; 
 
 			$self->resultset('PgLogLog')->create( $log_data );

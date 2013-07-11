@@ -51,11 +51,6 @@ __PACKAGE__->table("LogSet");
 
 =head1 ACCESSORS
 
-=head2 ShardId
-
-  data_type: 'smallint'
-  is_nullable: 0
-
 =head2 Id
 
   data_type: 'integer'
@@ -81,8 +76,6 @@ __PACKAGE__->table("LogSet");
 =cut
 
 __PACKAGE__->add_columns(
-  "ShardId",
-  { data_type => "smallint", is_nullable => 0 },
   "Id",
   {
     data_type         => "integer",
@@ -102,15 +95,13 @@ __PACKAGE__->add_columns(
 
 =over 4
 
-=item * L</ShardId>
-
 =item * L</Id>
 
 =back
 
 =cut
 
-__PACKAGE__->set_primary_key("ShardId", "Id");
+__PACKAGE__->set_primary_key("Id");
 
 
 

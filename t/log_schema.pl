@@ -45,7 +45,6 @@ $schema->txn_do(
     {   
 		Description => "adding new user: JohnSample with No Role",
         UserId => 1, 
-        ShardId => 10, 
     },
 );
 
@@ -57,7 +56,6 @@ $schema->txn_do(
     {   
 		Description => "Updating User JohnSample",
         UserId => 1, 
-        ShardId => 10, 
     },
 );
 
@@ -68,7 +66,6 @@ $schema->txn_do(
     {   
 		Description => "Deleteing User JohnSample",
         UserId => 1, 
-        ShardId => 10, 
     },
 );
 
@@ -89,15 +86,16 @@ $schema->txn_do(
     { 
 		Description => "adding new user: TehPwnerer -- no admin Role", 
         UserId => 1, 
-        ShardId => 10, 
 	},
 );
 
 $schema->txn_do(
     sub {
         my $user = $schema->resultset('User')->search( { Email => 'admin@test.com' } )->first;
-        $schema->resultset('UserRole')->search( { UserId => $user->id } )->delete_all;
-		$user->delete if($user);
+		if($user) {
+			$schema->resultset('UserRole')->search( { UserId => $user->id } )->delete_all;
+			$user->delete;
+		}
         $user = $schema->resultset('User')->create(
             {   Name  => "Admin User",
                 Email => 'admin@test.com',
@@ -118,7 +116,6 @@ $schema->txn_do(
     { 
 		Description => "Multi Action User -- With Admin Role", 
         UserId => 1, 
-        ShardId => 10, 
 	},
 );
 

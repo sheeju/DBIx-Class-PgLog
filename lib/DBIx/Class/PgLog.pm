@@ -153,12 +153,9 @@ sub _store_changes {
 		}
 
 	}
-	#@{$log_data->{Columns}} = keys %{$new_values} ? keys %{$new_values} : keys %{$old_values}; 
-	#@{$log_data->{OldValues}} = map{$old_values->{$_}} @{$log_data->{Columns}}; 
-	#@{$log_data->{NewValues}} = map{$new_values->{$_}} @{$log_data->{Columns}};
+	
 	$log_data->{Table} = $table;
 	$log_data->{TableId} = $row->can(Id)?$row->Id:$row->id;
-	$log_data->{TableShardId} = $row->can(ShardId)?$row->ShardId:0;
 	$log_data->{TableAction} = $action;
 
 	$self->_pg_log_schema->pg_log_create_log($log_data);

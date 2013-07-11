@@ -52,11 +52,6 @@ __PACKAGE__->table("Log");
 
 =head1 ACCESSORS
 
-=head2 ShardId
-
-  data_type: 'smallint'
-  is_nullable: 0
-
 =head2 Id
 
   data_type: 'integer'
@@ -79,11 +74,6 @@ __PACKAGE__->table("Log");
   data_type: 'varchar'
   is_nullable: 0
   size: 128
-
-=head2 TableShardId
-
-  data_type: 'smallint'
-  is_nullable: 0
 
 =head2 TableId
 
@@ -116,8 +106,6 @@ __PACKAGE__->table("Log");
 =cut
 
 __PACKAGE__->add_columns(
-  "ShardId",
-  { data_type => "smallint", is_nullable => 0 },
   "Id",
   {
     data_type         => "integer",
@@ -131,8 +119,6 @@ __PACKAGE__->add_columns(
   { data_type => "integer", is_nullable => 0 },
   "Table",
   { data_type => "varchar", is_nullable => 0, size => 128 },
-  "TableShardId",
-  { data_type => "smallint", is_nullable => 0 },
   "TableId",
   { data_type => "bigint", is_nullable => 0 },
   "TableAction",
@@ -159,15 +145,13 @@ __PACKAGE__->add_columns(
 
 =over 4
 
-=item * L</ShardId>
-
 =item * L</Id>
 
 =back
 
 =cut
 
-__PACKAGE__->set_primary_key("ShardId", "Id");
+__PACKAGE__->set_primary_key("Id");
 
 
 

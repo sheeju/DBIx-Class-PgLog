@@ -47,7 +47,7 @@ load the PgLog-component in your ResultSet classes:
 
 In your application wrap any insert/update/delete in a transaction to have pg log activated:
 
-* Mandatorily Pass an extra hashref to the txn_do method to indicate a UserId, Description and ShardId for the transaction:
+* Mandatorily Pass an extra hashref to the txn_do method to indicate a UserId and optional Description for the transaction:
 
     $my_schema->txn_do(
         sub {
@@ -55,7 +55,6 @@ In your application wrap any insert/update/delete in a transaction to have pg lo
         },
         {
             UserId => 'User_id',
-            ShardId => 'ShardId of Log',
             Description => 'description of transaction' # optional
         }
     );
@@ -161,19 +160,18 @@ The PgLog schema consists of 2 tables LogSet and Log, Log table extensively make
 
 =item LogSet 
 
-The L<PgLogLogSet|DBIx::Class::Schema::PgLog::Structure::LogSet> is an identifier for a transaction which has optional Description, mandatory UserId and ShardId. 
+The L<PgLogLogSet|DBIx::Class::Schema::PgLog::Structure::LogSet> is an identifier for a transaction which has optional Description, mandatory UserId. 
 
 	pg_log_test=> \d "LogSet"
 	                             Table "public.LogSet"
 	   Column    |   Type   |                       Modifiers                       
 	-------------+----------+-------------------------------------------------------
-	 ShardId     | smallint | not null
 	 Id          | integer  | not null default nextval('"LogSet_Id_seq"'::regclass)
 	 Epoch       | integer  | not null
 	 Description | text     | not null
 	 UserId      | integer  | not null
 	Indexes:
-	    "LogSet_pkey" PRIMARY KEY, btree ("ShardId", "Id")
+	    "LogSet_pkey" PRIMARY KEY, btree ("Id")
 
 =item Log 
 
@@ -183,12 +181,10 @@ The L<PgLogLog|DBIx::Class::Schema::PgLog::Structure::Log> table is main table w
 	                                      Table "public.Log"
 	    Column    |           Type           |                     Modifiers                      
 	--------------+--------------------------+----------------------------------------------------
-	 ShardId      | smallint                 | not null
 	 Id           | integer                  | not null default nextval('"Log_Id_seq"'::regclass)
 	 LogSetId     | bigint                   | not null
 	 Epoch        | integer                  | not null
 	 Table        | character varying(128)   | not null
-	 TableShardId | smallint                 | not null
 	 TableId      | bigint                   | not null
 	 TableAction  | tableactiontype          | not null default 'UPDATE'::tableactiontype
 	 Columns      | character varying(255)[] | 
@@ -196,7 +192,7 @@ The L<PgLogLog|DBIx::Class::Schema::PgLog::Structure::Log> table is main table w
 	 NewValues    | text[]                   | 
 	 UserId       | integer                  | not null
 	Indexes:
-	    "Log_pkey" PRIMARY KEY, btree ("ShardId", "Id")
+	    "Log_pkey" PRIMARY KEY, btree ("Id")
 
 =back
 
