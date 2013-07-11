@@ -8,13 +8,11 @@ use Try::Tiny;
 use lib '../lib';
 use DBIx::Class::PgLog;
 use lib 'lib';
-use PgLogTestPg::Schema;
+use PgLogTest::Schema;
 use Data::Dumper;
 
-my $schema = PgLogTestPg::Schema->connect( "DBI:Pg:dbname=pg_log_test",
+my $schema = PgLogTest::Schema->connect( "DBI:Pg:dbname=pg_log_test",
     "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
-
-#['dbi:Pg:dbname=audit_test','sheeju','sheeju', {'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' }],
 
 my $pgl_schema;
 
@@ -41,12 +39,11 @@ $schema->txn_do(
                 PasswordSalt => 'sheeju',
                 PasswordHash => 'sheeju',
                 Status => 'Active',
-                Type => 'Admin',
             }
         );
     },
     {   
-		Description => "adding new user: JohnSample",
+		Description => "adding new user: JohnSample with No Role",
         UserId => 1, 
         ShardId => 10, 
     },
@@ -77,99 +74,64 @@ $schema->txn_do(
 
 $schema->txn_do(
     sub {
+        my $user = $schema->resultset('User')->search( { Email => 'jeremy@purepwnage.com' } )->first;
+		$user->delete if($user);
+
         $schema->resultset('User')->create(
             {   Name  => "TehPnwerer",
                 Email => 'jeremy@purepwnage.com',
 				PasswordSalt => 'sheeju',
                 PasswordHash => 'sheeju',
                 Status => 'Active',
-                Type => 'User',
             }
         );
     },
     { 
-		Description => "adding new user: TehPwnerer -- no admin user", 
+		Description => "adding new user: TehPwnerer -- no admin Role", 
         UserId => 1, 
         ShardId => 10, 
 	},
 );
 
-my $superman;
-my $spiderman;
 $schema->txn_do(
     sub {
-        $superman = $schema->resultset('User')->create(
-            {   Name  => "Superman",
-                Email => 'ckent@dailyplanet.com',
+        my $user = $schema->resultset('User')->search( { Email => 'admin@test.com' } )->first;
+        $schema->resultset('UserRole')->search( { UserId => $user->id } )->delete_all;
+		$user->delete if($user);
+        $user = $schema->resultset('User')->create(
+            {   Name  => "Admin User",
+                Email => 'admin@test.com',
 				PasswordSalt => 'sheeju',
                 PasswordHash => 'sheeju',
                 Status => 'Active',
-                Type => 'Super',
             }
         );
-        $superman->update(
-            {   Name  => "Superman",
-                Email => 'ckent@dailyplanet.com',
-            }
-        );
-        $spiderman = $schema->resultset('User')->create(
-            {   Name  => "Spiderman",
-                Email => 'ppaker@dailybugle.com',
-				PasswordSalt => 'sheeju',
-                PasswordHash => 'sheeju',
-                Status => 'Active',
-                Type => 'Admin',
-            }
-        );
-        $schema->resultset('User')->search( { Name => "Spiderman" } )
-            ->first->update(
+        my $role = $schema->resultset('Role')->search( { Name => "Admin" } )->first;
+        $schema->resultset('UserRole')->create(
             {   
-				Name  => "Spiderman",
-                Email => 'pparker@dailybugle.com',
+				UserId => $user->id, 
+                RoleId => $role->id, 
             }
-            );
-        $schema->resultset('User')->search( { Name => "TehPnwerer" } )
-            ->first->update(
-            { Name => 'TehPwnerer' } );
+        );
+
     },
-    {   
-		Description => "multi-action changeset",
+    { 
+		Description => "Multi Action User -- With Admin Role", 
         UserId => 1, 
         ShardId => 10, 
-    },
+	},
 );
 
-
+my $user = $schema->resultset('User')->search( { Email => 'nolog@test.com' } )->first;
+$user->delete if($user);
 $schema->resultset('User')->create(
     {   
 		Name  => "NonLogsetUser",
-        Email => 'ncu@oanda.com',
+        Email => 'nolog@test.com',
 		PasswordSalt => 'sheeju',
 		PasswordHash => 'sheeju',
 		Status => 'Active',
-		Type => 'Admin',
     }
-);
-
-$schema->txn_do(
-    sub {
-        $schema->resultset('User')->create(
-            {   
-				Name  => "Drunk Hulk",
-                Email => 'drunkhulk@twitter.com',
-				PasswordSalt => 'sheeju',
-				PasswordHash => 'sheeju',
-				Status => 'Active',
-				Type => 'Admin',
-            }
-        );
-        $schema->resultset('User')->search( { Name => "Drunk Hulk" } )
-            ->first->update( { Email => 'drunkhulk@everywhere.com' } );
-    },
-    { 
-        UserId => 1, 
-        ShardId => 10, 
-	},
 );
 
 1;

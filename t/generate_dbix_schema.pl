@@ -11,7 +11,7 @@ use DBIx::Class::Schema::Loader 'make_schema_at';
 our ($opt_F, $opt_d);
 getopts('Fd');
 
-make_schema_at('PgLogTestPg::Schema',
+make_schema_at('PgLogTest::Schema',
 	       {
 			   debug => !!($opt_d), 
 			   really_erase_my_files => !!($opt_F),
