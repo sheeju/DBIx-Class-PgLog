@@ -18,8 +18,11 @@ WriteMakefile(
         'Test::More' => 0,
     },
     PREREQ_PM => {
-        #'ABC'              => 1.6,
-        #'Foo::Bar::Module' => 5.0401,
+        'Class::C3::Componentised' => 0,
+        'DBIx::Class'              => 0,
+        'MooseX::MarkAsMethods'    => 0,
+        'MooseX::NonMoose'         => 0,
+        'Scalar::Util'             => 0,
     },
     dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean => { FILES => 'DBIx-Class-PgLog-*' },
