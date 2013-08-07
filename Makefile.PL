@@ -26,4 +26,9 @@ WriteMakefile(
     },
     dist  => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean => { FILES => 'DBIx-Class-PgLog-*' },
+    META_MERGE => {
+        resources => {
+            repository => 'https://github.com/sheeju/DBIx-Class-PgLog',
+        },
+    },
 );
