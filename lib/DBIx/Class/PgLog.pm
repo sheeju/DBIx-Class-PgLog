@@ -142,6 +142,12 @@ sub _store_changes {
 	{
 		if ( $self->_do_pg_log($column) ) {
 			push(@{$log_data->{Columns}}, $column);
+			if(ref($old_values->{$column}) eq "ARRAY") {
+				$old_values->{$column} = "{".join(",", @{$old_values->{$column}})."}";
+			}
+			if(ref($new_values->{$column}) eq "ARRAY") {
+				$new_values->{$column} = "{".join(",", @{$new_values->{$column}})."}";
+			}
 			if ( $self->_do_modify_pg_log_value($column) ) {
 				push(@{$log_data->{NewValues}}, $self->_modify_pg_log_value( $column, $new_values->{$column} ));
 				push(@{$log_data->{OldValues}}, $self->_modify_pg_log_value( $column, $old_values->{$column} ));
