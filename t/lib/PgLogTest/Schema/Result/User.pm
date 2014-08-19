@@ -65,6 +65,12 @@ __PACKAGE__->table("User");
   is_nullable: 0
   size: 64
 
+=head2 UserType
+
+  accessor: 'user_type'
+  data_type: 'usertype[]'
+  is_nullable: 1
+
 =cut
 
 __PACKAGE__->add_columns(
@@ -92,6 +98,8 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => 64,
   },
+  "UserType",
+  { accessor => "user_type", data_type => "usertype[]", is_nullable => 1 },
 );
 
 =head1 PRIMARY KEY
@@ -148,8 +156,8 @@ Composing rels: L</user_roles> -> role
 __PACKAGE__->many_to_many("roles", "user_roles", "role");
 
 
-# Created by DBIx::Class::Schema::Loader v0.07035 @ 2013-07-11 14:35:31
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:qznfIrbfBwKHC+zfItmwrA
+# Created by DBIx::Class::Schema::Loader v0.07039 @ 2014-08-18 17:42:23
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IA6y4v3vSEZUWqvtY68O5Q
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

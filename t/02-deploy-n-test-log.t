@@ -1,8 +1,12 @@
 #/usr/bin/env perl
 
-use Modern::Perl;
+# Developed by Sheeju Alex
+# Licensed under terms of GNU General Public License.
+# All rights reserved.
+#
+# Changelog:
+# 2014-08-18 - created
 
-use Data::Printer;
 use Try::Tiny;
 
 use lib '../lib';
@@ -10,25 +14,26 @@ use DBIx::Class::PgLog;
 use lib 'lib';
 use PgLogTest::Schema;
 use Data::Dumper;
+use Test::More;
 
 my $schema = PgLogTest::Schema->connect( "DBI:Pg:dbname=pg_log_test",
-    "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
+    "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");
 
 my $pgl_schema;
 
 # deploy the audit log schema if it's not installed
 try {
     $pgl_schema = $schema->pg_log_schema;
-    my $changesets = $pgl_schema->resultset('PgLogLog')->all;
-	print Dumper($changesets);
+    my $logsets = $pgl_schema->resultset('PgLogLogSet')->all;
+	print Dumper($logsets);
 }
 catch {
-	print "deploying............\n";
 	$pgl_schema->deploy;
 };
 
 my $user_01;
 
+$schema->resultset('User')->search( { Name => 'JohnSample' } )->delete_all;
 
 $schema->txn_do(
     sub {
@@ -48,6 +53,10 @@ $schema->txn_do(
     },
 );
 
+ok($user_01->name eq 'JohnSample', 'Inserted JohnSample');
+my $log = $schema->resultset('Log')->search({Table => 'User', TableId => $user_01->id})->first;
+ok($log->table_action eq 'INSERT', 'INSERT Confirmed');
+
 
 $schema->txn_do(
     sub {
@@ -59,6 +68,11 @@ $schema->txn_do(
     },
 );
 
+ok($user_01->email eq 'sheeju@exceleron.com', 'Email Updated to sheeju@exceleron.com');
+my $log = $schema->resultset('Log')->search({Table => 'User', TableId => $user_01->id, TableAction => 'UPDATE'})->first;
+ok($log->table_action eq 'UPDATE', 'UPDATE Confirmed');
+
+
 $schema->txn_do(
     sub {
         $user_01->delete;
@@ -69,12 +83,17 @@ $schema->txn_do(
     },
 );
 
+my $log = $schema->resultset('Log')->search({Table => 'User', TableId => $user_01->id, TableAction => 'DELETE'})->first;
+ok($log->table_action eq 'DELETE', 'DELETE Confirmed');
+
+my $user;
+
 $schema->txn_do(
     sub {
-        my $user = $schema->resultset('User')->search( { Email => 'jeremy@purepwnage.com' } )->first;
+        $user = $schema->resultset('User')->search( { Email => 'jeremy@purepwnage.com' } )->first;
 		$user->delete if($user);
 
-        $schema->resultset('User')->create(
+        $user = $schema->resultset('User')->create(
             {   Name  => "TehPnwerer",
                 Email => 'jeremy@purepwnage.com',
 				PasswordSalt => 'sheeju',
@@ -89,9 +108,16 @@ $schema->txn_do(
 	},
 );
 
+ok($user->name eq 'TehPnwerer', 'Inserted TehPnwerer');
+my $log = $schema->resultset('Log')->search({Table => 'User', TableId => $user->id})->first;
+ok($log->table_action eq 'INSERT', 'INSERT Confirmed');
+
+my $role;
+my $user_role;
+
 $schema->txn_do(
     sub {
-        my $user = $schema->resultset('User')->search( { Email => 'admin@test.com' } )->first;
+        $user = $schema->resultset('User')->search( { Email => 'admin@test.com' } )->first;
 		if($user) {
 			$schema->resultset('UserRole')->search( { UserId => $user->id } )->delete_all;
 			$user->delete;
@@ -104,8 +130,8 @@ $schema->txn_do(
                 Status => 'Active',
             }
         );
-        my $role = $schema->resultset('Role')->search( { Name => "Admin" } )->first;
-        $schema->resultset('UserRole')->create(
+        $role = $schema->resultset('Role')->search( { Name => "Admin" } )->first;
+        $user_role = $schema->resultset('UserRole')->create(
             {   
 				UserId => $user->id, 
                 RoleId => $role->id, 
@@ -119,7 +145,13 @@ $schema->txn_do(
 	},
 );
 
-my $user = $schema->resultset('User')->search( { Email => 'nolog@test.com' } )->first;
+ok($user->name eq 'Admin User', 'Inserted Admin User');
+my $log = $schema->resultset('Log')->search({Table => 'User', TableId => $user->id})->first;
+ok($log->table_action eq 'INSERT', 'INSERT Confirmed');
+ok($role->name eq 'Admin', 'Role is Admin');
+ok($user_role->role_id == $role->id, 'User Role Created');
+
+$user = $schema->resultset('User')->search( { Email => 'nolog@test.com' } )->first;
 $user->delete if($user);
 $schema->resultset('User')->create(
     {   
@@ -131,4 +163,7 @@ $schema->resultset('User')->create(
     }
 );
 
+ok($user->name eq 'NonLogsetUser', 'Inserted NonLogsetUser');
+
+done_testing();
 1;
