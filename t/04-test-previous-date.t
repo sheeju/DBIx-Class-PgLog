@@ -15,38 +15,42 @@ use lib 'lib';
 use PgLogTest::Schema;
 use Data::Dumper;
 use Test::More;
+use DateTime;
 
 my $schema = PgLogTest::Schema->connect( "DBI:Pg:dbname=pg_log_test",
     "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
 
 
 my $user_01;
-$schema->resultset('User')->search( { Name => 'Array Test' } )->delete_all;
+my $dt = DateTime->new( year => 2010, month => 12, day => 25 );
+$dt_epoch = $dt->epoch();
+$schema->resultset('User')->search( { Name => 'Date Test' } )->delete_all;
 
 $schema->txn_do(
     sub {
         $user_01 = $schema->resultset('User')->create(
             {   
-				Name => 'Array Test',
-                Email => 'arraytest@sample.com',
+				Name => 'Date Test',
+                Email => 'datetest@sample.com',
                 PasswordSalt => 'sheeju',
                 PasswordHash => 'sheeju',
                 Status => 'Active',
-				UserType => ['Guest', 'Internal']
             }
         );
     },
     {   
-		Description => "adding new user: Array Test with Array UserType",
-        UserId => 1, 
+		Description => "adding new user: Date Test",
+        UserId => 1,
+	    Epoch => $dt_epoch	
     },
 );
 
-ok($user_01->name eq 'Array Test', 'Inserted Array Test');
+ok($user_01->name eq 'Date Test', 'Inserted Date Test');
 my $log = $schema->resultset('Log')->search({Table => 'User', TableId => $user_01->id})->first;
 ok($log->table_action eq 'INSERT', 'INSERT Confirmed');
-isa_ok( $user_01->user_type, 'ARRAY' );
-ok( eq_array($user_01->user_type, ['Guest', 'Internal']), 'UserType are Guest & Internal' );
+ok($log->epoch == $dt_epoch, 'Previous Epoch is added' );
+my $log_dt = DateTime->from_epoch( epoch => $log->epoch );
+ok($dt->dmy == $log_dt->dmy, 'Same Date: '.$dt->dmy);
 
 done_testing();
 1;
