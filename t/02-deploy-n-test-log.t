@@ -153,7 +153,7 @@ ok($user_role->role_id == $role->id, 'User Role Created');
 
 $user = $schema->resultset('User')->search( { Email => 'nolog@test.com' } )->first;
 $user->delete if($user);
-$schema->resultset('User')->create(
+$user = $schema->resultset('User')->create(
     {   
 		Name  => "NonLogsetUser",
         Email => 'nolog@test.com',

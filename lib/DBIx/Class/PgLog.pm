@@ -2,36 +2,76 @@ package DBIx::Class::PgLog;
 
 =head1 NAME
 
-DBIx::Class::PgLog - The great new DBIx::Class::PgLog!
+DBIx::Class::PgLog - Postgres simple activity loging for DBIx::Class
+
+The PgLog schema consists of 2 tables LogSet and Log, Log table extensively makes use of the power of Postgres to store the Columns, OldValues and NewValues in an Column Array format to avoid the relational database structure which imporves the performance of write and read from PgLog.
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
-
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
-Quick summary of what the module does.
+DBIx::Class::PgLog is meant for Logging changes made to specific tables in your database.
 
-Perhaps a little code snippet.
+Any insert/update/delete that requires auditing must be wrapped in a L<"txn_do"|DBIx::Class::Schema/"txn_do"> statement.
 
-    use DBIx::Class::PgLog;
+Transactions are saved as LogSets.  Each LogSet can have many Log's with TableAction as INSERT/UPDATE/DELETE. 
 
-    my $foo = DBIx::Class::PgLog->new();
-    ...
+=head1 DESCRIPTION
 
-=head1 EXPORT
+Enable the PgLog schema component in your L<DBIx::Class::Schema> class file:
 
-A list of functions that can be exported.  You can delete this section
-if you don't export anything, such as for a purely object-oriented module.
+    package My::Schema;
+    use base qw/DBIx::Class::Schema/;
 
-=head1 SUBROUTINES/METHODS
+    __PACKAGE__->load_components(qw/Schema::PgLog/);
 
-=head2 function1
+Enable the PgLog component in your the individual L<DBIx::Class> table class files that you want to enable logging on:
+
+    package My::Schema::Result::Table
+    use base qw/DBIx::Class::Core/;
+
+    __PACKAGE__->load_components(qw/PgLog/);
+
+If you want to use methods created by L<DBIx::Class::Relationship::Base>, like "add_to_$rel" or "set_$rel",
+if you are planing to use L<DBIx::Class::ResultSet/delete> or L<DBIx::Class::ResultSet/update> or if you use
+modules which make use of these methods (like L<HTML::FormHandler> or L<DBIx::Class::ResultSet::RecursiveUpdate>,
+load the PgLog-component in your ResultSet classes:
+
+    package My::Schema::ResultSet::Table;
+
+    use base 'DBIx::Class::ResultSet';
+
+    __PACKAGE__->load_components('ResultSet::PgLog');
+
+    1;
+
+In your application wrap any insert/update/delete in a transaction to have pg log activated:
+
+* Mandatorily Pass an extra hashref to the txn_do method to indicate a UserId and optional Description for the transaction:
+
+    $my_schema->txn_do(
+        sub {
+            $my_row->update({ ... });
+        },
+        {
+            UserId => 'User_id',
+            Description => 'description of transaction' # optional
+        }
+    );
+
+=head1 DBIx::Class OVERRIDDEN METHODS
+ 
+=head2 insert
+ 
+=head2 update
+ 
+=head2 delete
 
 =cut
 
@@ -74,30 +114,6 @@ sub update {
             @changed_columns;
     }
 
-=pod
-
-    foreach my $col ( $self->columns ) {
-        if ( $self->_force_audit($col) ) {
-            $old_data{$col} = $stored_row->get_column($col)
-                unless defined $old_data{$col};
-            $new_data{$col} = $self->get_column($col)
-                unless defined $new_data{$col};
-        }
-    }
-
-    # remove unwanted columns
-    foreach my $key ( keys %new_data ) {
-        next if $self->_force_audit($key);    # skip forced cols
-        if (   defined $old_data{$key}
-            && defined $new_data{$key}
-            && $old_data{$key} eq $new_data{$key}
-            || !defined $old_data{$key} && !defined $new_data{$key} )
-        {
-            delete $new_data{$key};           # remove unchanged cols
-        }
-    }
-
-=cut
     if ( keys %new_data ) {
 		my $action = "UPDATE";
 		$self->_store_changes( $action, $result, \%old_data, \%new_data );
@@ -122,10 +138,32 @@ sub delete {
     return $result;
 }
 
+=head1 HELPER METHODS
+
+=head2 _pg_log_schema
+
+Returns PgLog schema from storage
+
+	my $pl_schema = $schema->pg_log_schema;
+
+=cut
+
 sub _pg_log_schema {
     my $self = shift;
     return $self->result_source->schema->pg_log_schema;
 }
+
+=head2 _store_changes
+ 
+Store the column data that has changed
+ 
+Requires:
+    action: the action object that has associated changes
+	old_values: the old values are being replaced
+	new_values: the new values that are replacing the old
+	table: dbic object of the audit_log_table object
+
+=cut
 
 sub _store_changes {
     my $self       = shift;
@@ -168,6 +206,15 @@ sub _store_changes {
 
 }
 
+=head2 _do_pg_log
+ 
+Returns 1 or 0 if the column should be audited or not.
+ 
+Requires:
+    column: the name of the column/field to check
+
+=cut
+
 sub _do_pg_log {
     my $self   = shift;
     my $column = shift;
@@ -177,6 +224,15 @@ sub _do_pg_log {
         && $info->{pg_log_column} == 0 ? 0 : 1;
 }
 
+=head2 _do_modify_pg_log_value
+
+Returns 1 or 0 if the columns value should be modified before audit.
+ 
+Requires:
+    column: the name of the column/field to check
+
+=cut
+
 sub _do_modify_pg_log_value {
     my $self   = shift;
     my $column = shift;
@@ -185,6 +241,19 @@ sub _do_modify_pg_log_value {
 
     return $info->{modify_pg_log_value} ? 1 : 0;
 }
+
+=head2 _modify_pg_log_value
+
+Modifies the colums audit-value. Dies if no modify-method could be found.
+ 
+Returns:
+    the modified value
+	 
+Requires:
+	column: the name of the column/field to check
+	value: the original value
+
+=cut
 
 sub _modify_pg_log_value {
     my $self   = shift;
@@ -209,6 +278,127 @@ sub _modify_pg_log_value {
 
 }
 
+=head1 ADDITIONAL DBIC COLUMN ATTRIBUTES
+
+Individual columns can have additional attributes added to change the Audit Log functionality.
+
+=head2 pg_log_column
+
+On an individual column basis you can disable auditing by setting 'pg_log_column' to 0:
+
+    __PACKAGE__->add_columns(
+      "admin_id",
+      { data_type => "integer", is_auto_increment => 1, is_nullable => 0, pg_log_column => 0 },
+      "admin_name",
+      { data_type => "varchar", is_nullable => 0, size => 20 },
+      "admin_pasword",
+      { data_type => "varchar", is_nullable => 0, size => 20 },
+    );
+
+If you are using a DBIx::Class generated schema, and don't want to modify the column defintions directly, you can add the following to the editable portion of the Result Class file:
+
+    __PACKAGE__->add_columns(
+        "+admin_id",
+        { pg_log_column => 0, }
+    );
+
+=head2 modify_pg_log_value
+
+It is possible to modify the values stored by DBIC::PgLog on a per-column basis
+by setting the 'modify_pg_log_value' attibute to either a CodeRef, a method
+name or any true value. The configured code will be run as an object method of
+the current DBIC::Result object, and expects the original value as parameter.
+
+If 'modify_pg_log_value' is set to a true value which is NOT a method in the
+current objects class, PgLog will look for a method called
+'modify_pg_log_$colname', where $colname is the name of the corresponding column.
+
+Note: PgLog will simply die if it can not find the modification method while
+'modify_pg_log_value' is true.
+
+The following examples have the same result:
+
+passing a coderef:
+
+    __PACKAGE__->add_columns(
+        "+name",
+        { modify_pg_log_value => sub{
+        my ($self, $value) = @_;
+        $value =~ tr/A-Z/a-z/;
+        return $value;
+    }, }
+    );
+
+passing a method name:
+
+    __PACKAGE__->add_columns(
+        "+name",
+        { modify_pg_log_value => 'to_lowercase'},
+    );
+
+    sub to_lowercase{
+        my ($self, $value) = @_;
+        $value =~ tr/A-Z/a-z/;
+        return $value;
+    }
+
+passing a true value which is NOT a method name:
+
+    __PACKAGE__->add_columns(
+        "+name",
+        { modify_pg_log_value => 1},
+    );
+
+    sub modify_pg_log_name{
+        my ($self, $value) = @_;
+        $value =~ tr/A-Z/a-z/;
+        return $value;
+    }
+
+=head1 DEPLOYMENT
+
+To deploy an PgLog schema, load your main schema, and then run the deploy command on the pg_log_schema:
+
+	my $schema = PgLogTestPg::Schema->connect( "DBI:Pg:dbname=pg_log_test",
+	    "sheeju", "sheeju", { RaiseError => 1, PrintError => 1, 'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' } ) || die("cant connect");;
+	
+	$schema->pg_log_schema->deploy();
+
+The db user that is deploying the schema must have the correct create table permissions.
+
+Note: this should only be run once.
+
+=head1 METHODS
+
+=head2 pg_log_schema
+
+=over 4
+
+=item Returns: DBIC schema
+
+=back
+
+The PgLog schema can be accessed from your main schema by calling the pg_log_schema method.
+
+    my $pl_schema = $schema->pg_log_schema;
+
+=head1 SEE ALSO
+
+=over 4
+
+=item * L<DBIx::Class>
+
+=item * L<DBIx::Class::Journal>
+
+=item * L<DBIx::Class::AuditLog>
+
+=back
+
+=head1 ACKNOWLEDGEMENTS
+
+Development time supported by Exceleron L<www.exceleron.com|http://www.exceleron.com>.
+
+Many ideas and code borrowed from L<DBIx::Class::AuditLog>.
 
 =head1 AUTHOR
 
@@ -216,12 +406,7 @@ Sheeju Alex, C<< <sheeju at exceleron.com> >>
 
 =head1 BUGS
 
-Please report any bugs or feature requests to C<bug-dbix-class-pglog at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=DBIx-Class-PgLog>.  I will be notified, and then you'll
-automatically be notified of progress on your bug as I make changes.
-
-
-
+https://github.com/sheeju/DBIx-Class-PgLog/issues
 
 =head1 SUPPORT
 
@@ -251,10 +436,6 @@ L<http://cpanratings.perl.org/d/DBIx-Class-PgLog>
 L<http://search.cpan.org/dist/DBIx-Class-PgLog/>
 
 =back
-
-
-=head1 ACKNOWLEDGEMENTS
-
 
 =head1 LICENSE AND COPYRIGHT
 
@@ -295,7 +476,6 @@ YOUR LOCAL LAW. UNLESS REQUIRED BY LAW, NO COPYRIGHT HOLDER OR
 CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, OR
 CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE OF THE PACKAGE,
 EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 =cut
 
