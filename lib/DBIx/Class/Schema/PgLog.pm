@@ -16,20 +16,18 @@ __PACKAGE__->mk_classdata('pg_log_storage_type');
 
 =head1 NAME
 
-DBIx::Class::Schema::PgLog - The great new DBIx::Class::Schema::PgLog!
+DBIx::Class::Schema::PgLog - Schema PgLog Module 
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS
-
-Quick summary of what the module does.
 
 Perhaps a little code snippet.
 

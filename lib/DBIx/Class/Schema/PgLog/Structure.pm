@@ -10,20 +10,18 @@ require DBIx::Class::Schema::PgLog::Structure::LogSet;
 
 =head1 NAME
 
-DBIx::Class::Schema::PgLog::Structure - The great new DBIx::Class::Schema::PgLog::Structure!
+DBIx::Class::Schema::PgLog::Structure
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS
-
-Quick summary of what the module does.
 
 Perhaps a little code snippet.
 

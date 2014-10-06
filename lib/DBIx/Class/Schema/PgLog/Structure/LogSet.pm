@@ -5,20 +5,18 @@ use warnings FATAL => 'all';
 
 =head1 NAME
 
-DBIx::Class::Schema::PgLog::Structure::LogSet - The great new DBIx::Class::Schema::PgLog::Structure::LogSet!
+DBIx::Class::Schema::PgLog::Structure::LogSet
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS
-
-Quick summary of what the module does.
 
 Perhaps a little code snippet.
 
@@ -33,8 +31,6 @@ A list of functions that can be exported.  You can delete this section
 if you don't export anything, such as for a purely object-oriented module.
 
 =head1 SUBROUTINES/METHODS
-
-=head2 function1
 
 =cut
 

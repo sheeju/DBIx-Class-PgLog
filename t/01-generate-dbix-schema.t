@@ -12,25 +12,31 @@ use Getopt::Std;
 use Data::Dumper;
 use Test::More;
 
-use lib "$FindBin::Bin/../lib";
-use lib "$FindBin::Bin/lib";
+use lib qw( lib t/lib );
 
-use DBIx::Class::Schema::Loader 'make_schema_at';
+#database - pg_log_test
+my $database = $ENV{PG_NAME} || '';
+#user - sheeju
+my $user     = $ENV{PG_USER} || '';
+#password - sheeju
+my $password = $ENV{PG_PASS} || '';
 
-our ($opt_F, $opt_d);
-getopts('Fd');
-
-make_schema_at('PgLogTest::Schema',
-	       {
-			   debug => !!($opt_d), 
-			   really_erase_my_files => !!($opt_F),
-			   dump_directory=>"$FindBin::Bin/lib",
-			   overwrite_modifications=>1,
-               preserve_case=>1,
-		   },
-	       ['dbi:Pg:dbname=pg_log_test','sheeju','sheeju', {'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' }],
-	      );
-
-BEGIN {use_ok( 'PgLogTest::Schema' ) };
-BEGIN {use_ok( 'PgLogTest::Schema::Result::User' ) };
-done_testing();
+if( !$database || !$user ) {
+	plan skip_all => 'You need to set the PG_NAME, PG_USER and PG_PASS environment variables';
+} else {
+	our ($opt_F, $opt_d);
+	getopts('Fd');
+	use DBIx::Class::Schema::Loader 'make_schema_at';
+	make_schema_at('PgLogTest::Schema',
+		{
+			debug => !!($opt_d), 
+			really_erase_my_files => !!($opt_F),
+			dump_directory=>"$FindBin::Bin/lib",
+			overwrite_modifications=>1,
+			preserve_case=>1,
+		},
+		['dbi:Pg:dbname='.$database, $user, $password, {'quote_char' => '"', 'quote_field_names' => '0', 'name_sep' => '.' }],
+	);
+	done_testing();
+}
+1;
