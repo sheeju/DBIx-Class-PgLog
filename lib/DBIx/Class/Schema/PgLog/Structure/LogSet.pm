@@ -9,11 +9,11 @@ DBIx::Class::Schema::PgLog::Structure::LogSet
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 =head1 SYNOPSIS
